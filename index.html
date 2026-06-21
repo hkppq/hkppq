@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Español SRS</title>
+<meta name="theme-color" content="#C8412B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Español SRS">
+<style>
+  :root {
+    --red: #C8412B; --red-dark: #7A1E12; --yellow: #F0C420;
+    --bg: #FBFAF7; --surface: #FFFFFF; --surface-2: #F2EFE9;
+    --text: #1F1B18; --text-2: #6B6259; --text-3: #9A9088;
+    --border: rgba(31,27,24,0.12); --border-2: rgba(31,27,24,0.22);
+    --success-bg: #E7F3E4; --success: #2E6B2A;
+    --warn-bg: #FBF0D8; --warn: #8A5A0B;
+    --danger-bg: #FBE7E3; --danger: #A8311E;
+    --info-bg: #FBE9E5; --info: #C8412B;
+    --radius: 10px; --radius-lg: 14px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1715; --surface: #262220; --surface-2: #2F2A27;
+      --text: #F2EEE9; --text-2: #B5ACA3; --text-3: #847A71;
+      --border: rgba(255,255,255,0.14); --border-2: rgba(255,255,255,0.24);
+      --success-bg: #1E3320; --success: #8FD18C;
+      --warn-bg: #3A2E16; --warn: #F0C879;
+      --danger-bg: #3A201B; --danger: #F0A294;
+      --info-bg: #3A211C; --info: #F0A294;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body {
+    min-height: 100vh; min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+  button { font-family: var(--font); }
+  input { font-family: var(--font); background: var(--surface); color: var(--text); border: 1px solid var(--border-2); border-radius: var(--radius); outline: none; }
+  input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,65,43,0.15); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.92em; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .stat { background: var(--surface-2); border-radius: var(--radius); padding: 14px; }
+  .stat .label { font-size: 13px; color: var(--text-2); }
+  .stat .val { font-size: 24px; font-weight: 600; margin-top: 2px; }
+  .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border-radius: var(--radius-lg); border: 1px solid var(--border-2); background: var(--surface); color: var(--text); cursor: pointer; transition: transform 0.08s; }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-sm { padding: 11px; font-size: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row { display: flex; flex-direction: column; gap: 14px; }
+  .muted { color: var(--text-3); font-size: 13px; }
+  .pbar { height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .pbar > div { height: 100%; background: var(--red); transition: width 0.3s; }
+  .blank { display: inline-block; min-width: 84px; border-bottom: 2px solid var(--red); text-align: center; color: var(--red); font-weight: 600; }
+  .install-banner { position: sticky; bottom: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1 class="sr-only">스페인어 문맥 기반 간격 반복 학습 앱</h1>
+  <div id="app"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DEFAULT_CARDS = [
+    { es: "Quiero comprar pan.", blank: "comprar", ko: "나는 빵을 사고 싶다.", word: "사다", hint: "to buy" },
+    { es: "Ella vive en Madrid.", blank: "vive", ko: "그녀는 마드리드에 산다.", word: "살다", hint: "lives" },
+    { es: "Necesito agua, por favor.", blank: "agua", ko: "물이 필요해요, 부탁합니다.", word: "물", hint: "water" },
+    { es: "Hoy hace mucho calor.", blank: "calor", ko: "오늘은 매우 덥다.", word: "더위", hint: "heat" },
+    { es: "Mi casa es pequeña.", blank: "casa", ko: "내 집은 작다.", word: "집", hint: "house" },
+    { es: "Vamos a comer ahora.", blank: "comer", ko: "지금 먹으러 가자.", word: "먹다", hint: "to eat" },
+    { es: "El gato duerme mucho.", blank: "duerme", ko: "고양이는 많이 잔다.", word: "자다", hint: "sleeps" },
+    { es: "Tengo dos hermanos.", blank: "hermanos", ko: "나는 형제가 둘 있다.", word: "형제들", hint: "siblings" },
+    { es: "¿Dónde está el baño?", blank: "baño", ko: "화장실이 어디예요?", word: "화장실", hint: "bathroom" },
+    { es: "Hablo un poco de español.", blank: "español", ko: "나는 스페인어를 조금 한다.", word: "스페인어", hint: "Spanish" },
+    { es: "Me gusta leer libros.", blank: "leer", ko: "나는 책 읽는 것을 좋아한다.", word: "읽다", hint: "to read" },
+    { es: "La comida está deliciosa.", blank: "deliciosa", ko: "음식이 맛있다.", word: "맛있는", hint: "delicious" },
+    { es: "Trabajo todos los días.", blank: "Trabajo", ko: "나는 매일 일한다.", word: "일하다", hint: "I work" },
+    { es: "Compré una camisa nueva.", blank: "camisa", ko: "나는 새 셔츠를 샀다.", word: "셔츠", hint: "shirt" },
+    { es: "El tren llega tarde.", blank: "tren", ko: "기차가 늦게 도착한다.", word: "기차", hint: "train" },
+    { es: "Quiero aprender a cocinar.", blank: "cocinar", ko: "나는 요리를 배우고 싶다.", word: "요리하다", hint: "to cook" },
+    { es: "Hace frío en invierno.", blank: "frío", ko: "겨울에는 춥다.", word: "추위", hint: "cold" },
+    { es: "Ella es muy amable.", blank: "amable", ko: "그녀는 매우 친절하다.", word: "친절한", hint: "kind" },
+    { es: "Necesito dinero para el viaje.", blank: "dinero", ko: "나는 여행을 위해 돈이 필요하다.", word: "돈", hint: "money" },
+    { es: "Vamos a la playa mañana.", blank: "playa", ko: "우리는 내일 해변에 간다.", word: "해변", hint: "beach" },
+    { es: "El médico es muy bueno.", blank: "médico", ko: "그 의사는 매우 좋다.", word: "의사", hint: "doctor" },
+    { es: "Abre la ventana, por favor.", blank: "ventana", ko: "창문을 열어주세요.", word: "창문", hint: "window" },
+    { es: "Estudio en la universidad.", blank: "universidad", ko: "나는 대학에서 공부한다.", word: "대학", hint: "university" },
+    { es: "Mi familia es grande.", blank: "familia", ko: "우리 가족은 대가족이다.", word: "가족", hint: "family" },
+    { es: "Bebo café por la mañana.", blank: "café", ko: "나는 아침에 커피를 마신다.", word: "커피", hint: "coffee" }
+  ];
+
+  const SESSION_MAX = 20, DAY = 86400000;
+  const NEW_MIN = 1, NEW_MAX = 10, NEW_DEFAULT = 4;
+  const STORE_KEY = "espanol_srs_state_v1";
+
+  function newPerSession(){
+    const n = state && state.newPerSession;
+    return (typeof n === "number" && n >= NEW_MIN && n <= NEW_MAX) ? n : NEW_DEFAULT;
+  }
+
+  let state = null, queue = [], qIdx = 0, sessionWrong = [];
+  let sessionStats = { correct: 0, wrong: 0, near: 0 }, revealed = false, pendingImport = [];
+  let deferredPrompt = null;
+
+  function normalize(s){ return (s||"").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+  function todayStart(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+  function esc(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  // ---- 저장 (localStorage) ----
+  function newTrack(){ return { ef:2.5, interval:0, reps:0, due:null }; }
+  function makeCard(id, c){
+    return { id, es:c.es, blank:c.blank, ko:c.ko, word:c.word, hint:c.hint,
+      w:{ ef:2.5, interval:0, reps:0, due:null, introduced:false },
+      s:newTrack(), lastSeen:null };
+  }
+  // 구버전(단어 SRS가 카드 최상위에 있던 형태)을 단어/문장 분리형으로 변환
+  function migrateCard(c){
+    if (c.w && c.s) return c; // 이미 신형
+    const mc = { id:c.id, es:c.es, blank:c.blank, ko:c.ko, word:c.word, hint:c.hint,
+      w:{ ef:c.ef!=null?c.ef:2.5, interval:c.interval||0, reps:c.reps||0, due:c.due!=null?c.due:null, introduced:!!c.introduced },
+      s:newTrack(), lastSeen:c.lastSeen!=null?c.lastSeen:null };
+    if (mc.w.introduced && mc.s.due===null) mc.s.due = todayStart();
+    return mc;
+  }
+  function loadState(){
+    try { const raw = localStorage.getItem(STORE_KEY); if (raw) state = JSON.parse(raw); }
+    catch(e){ state = null; }
+    if (!state){
+      state = { cards: DEFAULT_CARDS.map((c,i)=>makeCard(i,c)),
+        streak:0, lastStudyDay:null, totalReviews:0, nextId:DEFAULT_CARDS.length, newPerSession:NEW_DEFAULT };
+      saveState();
+    }
+    if (state.nextId === undefined) state.nextId = state.cards.length;
+    if (state.newPerSession === undefined) state.newPerSession = NEW_DEFAULT;
+    state.cards = state.cards.map(migrateCard);
+  }
+  function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} }
+  function resetAll(){ try { localStorage.removeItem(STORE_KEY); } catch(e){} state=null; loadState(); buildHome(); }
+  function addCards(newCards){
+    newCards.forEach(c=>{ state.cards.push(makeCard(state.nextId++, c)); });
+    saveState();
+  }
+
+  // ---- 백업/복원 ----
+  const BK_COLS=["id","es","blank","ko","word","hint","w_ef","w_interval","w_reps","w_due","w_introduced","s_ef","s_interval","s_reps","s_due","lastSeen"];
+  function csvField(s){ s=String(s==null?"":s); return /[",\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+  function exportBackup(){
+    const rows=[BK_COLS.slice()];
+    rows.push(["__meta__", JSON.stringify({streak:state.streak,lastStudyDay:state.lastStudyDay,totalReviews:state.totalReviews,nextId:state.nextId,newPerSession:state.newPerSession}),"","","","","","","","","","","","","",""]);
+    state.cards.forEach(c=>{
+      rows.push([c.id,c.es,c.blank,c.ko,c.word,c.hint,
+        c.w.ef,c.w.interval,c.w.reps,c.w.due==null?"":c.w.due,c.w.introduced?1:0,
+        c.s.ef,c.s.interval,c.s.reps,c.s.due==null?"":c.s.due,c.lastSeen==null?"":c.lastSeen]);
+    });
+    return "\uFEFF"+rows.map(r=>r.map(csvField).join(",")).join("\r\n");
+  }
+  function importBackup(text){
+    const rows=parseCSV(text);
+    if (rows.length<2) throw new Error("내용이 없습니다");
+    const header=rows[0].map(h=>h.trim());
+    const idx={}; BK_COLS.forEach(c=>idx[c]=header.indexOf(c));
+    if (idx.id<0||idx.es<0||idx.w_ef<0) throw new Error("백업 파일 형식이 아닙니다");
+    const num=(v,d)=>{const n=parseFloat(v);return isNaN(n)?d:n;};
+    let meta=null; const cards=[];
+    for (let i=1;i<rows.length;i++){
+      const r=rows[i];
+      if (r[idx.id]==="__meta__"){ try{ meta=JSON.parse(r[idx.es]); }catch(e){ meta=null; } continue; }
+      if (!r[idx.es]) continue;
+      cards.push({
+        id:num(r[idx.id],cards.length), es:r[idx.es],blank:r[idx.blank],ko:r[idx.ko],word:r[idx.word]||"",hint:r[idx.hint]||"",
+        w:{ef:num(r[idx.w_ef],2.5),interval:num(r[idx.w_interval],0),reps:num(r[idx.w_reps],0),due:r[idx.w_due]===""?null:num(r[idx.w_due],null),introduced:r[idx.w_introduced]==="1"||r[idx.w_introduced]===1},
+        s:{ef:num(r[idx.s_ef],2.5),interval:num(r[idx.s_interval],0),reps:num(r[idx.s_reps],0),due:r[idx.s_due]===""?null:num(r[idx.s_due],null)},
+        lastSeen:r[idx.lastSeen]===""?null:num(r[idx.lastSeen],null)
+      });
+    }
+    if (cards.length===0) throw new Error("복원할 카드가 없습니다");
+    const m=meta||{};
+    state={ cards, streak:m.streak||0, lastStudyDay:m.lastStudyDay!=null?m.lastStudyDay:null,
+      totalReviews:m.totalReviews||0, nextId:m.nextId!=null?m.nextId:cards.length, newPerSession:m.newPerSession||NEW_DEFAULT };
+    if (state.nextId<=Math.max(...cards.map(c=>c.id))) state.nextId=Math.max(...cards.map(c=>c.id))+1;
+    saveState();
+    return cards.length;
+  }
+
+  // ---- CSV ----
+  function parseCSV(text){
+    const rows=[]; let row=[], field="", inQ=false;
+    text = text.replace(/^\uFEFF/,"");
+    for (let i=0;i<text.length;i++){
+      const c=text[i], n=text[i+1];
+      if (inQ){
+        if (c==='"' && n==='"'){ field+='"'; i++; }
+        else if (c==='"'){ inQ=false; }
+        else field+=c;
+      } else {
+        if (c==='"') inQ=true;
+        else if (c===','){ row.push(field); field=""; }
+        else if (c==='\r'){}
+        else if (c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+        else field+=c;
+      }
+    }
+    if (field.length>0 || row.length>0){ row.push(field); rows.push(row); }
+    return rows.filter(r=>r.length>1 || (r.length===1 && r[0].trim()!==""));
+  }
+  function csvToCards(text){
+    const rows = parseCSV(text);
+    if (rows.length<2) return { cards:[], errors:["데이터 행이 없습니다."] };
+    const header = rows[0].map(h=>h.trim().toLowerCase());
+    const idx = { es:header.indexOf("es"), blank:header.indexOf("blank"), ko:header.indexOf("ko"), word:header.indexOf("word"), hint:header.indexOf("hint") };
+    if (idx.es<0 || idx.blank<0 || idx.ko<0) return { cards:[], errors:["헤더에 es, blank, ko 컬럼이 필요합니다."] };
+    const cards=[], errors=[];
+    for (let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const es=(r[idx.es]||"").trim(), blank=(r[idx.blank]||"").trim(), ko=(r[idx.ko]||"").trim(),
+        word=idx.word>=0?(r[idx.word]||"").trim():"", hint=idx.hint>=0?(r[idx.hint]||"").trim():"";
+      if (!es||!blank||!ko){ errors.push(`${i+1}행: 필수 항목 누락`); continue; }
+      if (!es.includes(blank)){ errors.push(`${i+1}행: 빈칸 단어가 문장에 없음`); continue; }
+      cards.push({es,blank,ko,word,hint});
+    }
+    return { cards, errors };
+  }
+
+  // ---- SM-2 (트랙 t = card.w 또는 card.s) ----
+  function sm2(t,q){
+    let {ef,interval,reps}=t;
+    if (q<3){ reps=0; interval=0; }
+    else { reps+=1;
+      if (reps===1) interval=1; else if (reps===2) interval=3;
+      else if (reps===3) interval=7; else if (reps===4) interval=21;
+      else interval=Math.round(interval*ef);
+    }
+    ef=ef+(0.1-(5-q)*(0.08+(5-q)*0.02)); if (ef<1.3) ef=1.3;
+    t.ef=Math.round(ef*100)/100; t.interval=interval; t.reps=reps;
+    t.due=interval===0?Date.now():todayStart()+interval*DAY;
+    return t;
+  }
+
+  function buildSession(){
+    const now=Date.now();
+    // 1부: 단어 — 복습 due + 신규 도입
+    const wDue=state.cards.filter(c=>c.w.introduced && c.w.due!==null && c.w.due<=now);
+    const wNew=state.cards.filter(c=>!c.w.introduced).slice(0,newPerSession());
+    wNew.forEach(c=>{ c.w.introduced=true; if(c.s.due===null) c.s.due=todayStart(); });
+    let wordQ=[];
+    wDue.forEach(c=>wordQ.push({id:c.id,mode:"word"}));
+    wNew.forEach(c=>{ wordQ.push({id:c.id,mode:"word"}); wordQ.push({id:c.id,mode:"word"}); });
+    wordQ=shuffleNoAdjacentBy(wordQ);
+    if (wordQ.length>SESSION_MAX) wordQ=wordQ.slice(0,SESSION_MAX);
+    // 2부: 문장 — 단어 도입된 카드 중 문장 due 도달
+    const sDue=state.cards.filter(c=>c.w.introduced && c.s.due!==null && c.s.due<=now);
+    let sentQ=sDue.map(c=>({id:c.id,mode:"sentence"}));
+    sentQ=shuffleNoAdjacentBy(sentQ);
+    if (sentQ.length>SESSION_MAX) sentQ=sentQ.slice(0,SESSION_MAX);
+    return { wordQ, sentQ };
+  }
+  function shuffleNoAdjacentBy(arr){
+    if (arr.length<2) return arr;
+    let best=null;
+    for (let t=0;t<30;t++){
+      const a=[...arr];
+      for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+      let ok=true; for(let i=1;i<a.length;i++){if(a[i].id===a[i-1].id){ok=false;break;}}
+      if (ok) return a; best=a;
+    }
+    return best;
+  }
+  function getCard(id){ return state.cards.find(c=>c.id===id); }
+  function wordDueCount(){ const now=Date.now(); return state.cards.filter(c=>c.w.introduced&&c.w.due!==null&&c.w.due<=now).length; }
+  function sentDueCount(){ const now=Date.now(); return state.cards.filter(c=>c.w.introduced&&c.s.due!==null&&c.s.due<=now).length; }
+  function newCount(){ return state.cards.filter(c=>!c.w.introduced).length; }
+  function learnedCount(){ return state.cards.filter(c=>c.w.introduced).length; }
+  function masteredCount(){ return state.cards.filter(c=>c.w.reps>=4 && c.s.reps>=4).length; }
+
+  const root=()=>document.getElementById("app");
+
+  function installBannerHTML(){
+    if (!deferredPrompt) return "";
+    return `<div class="install-banner"><button id="installBtn" class="btn btn-sm" style="border-color:var(--red);color:var(--red);">홈 화면에 설치하기</button></div>`;
+  }
+  function wireInstall(){
+    const b=document.getElementById("installBtn");
+    if (b) b.onclick=async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; buildHome(); };
+  }
+
+  function buildHome(){
+    const wDue=wordDueCount(), sDue=sentDueCount(), fresh=Math.min(newCount(),newPerSession());
+    const total=wDue+fresh*2+sDue+fresh; // 단어(신규2회)+문장(신규1회) 대략치
+    const totalCount = wDue+fresh + sDue; // 화면 표시용: 다룰 카드 수
+    root().innerHTML=`
+      <div class="row">
+        <div style="text-align:center;padding:6px 0;">
+          <div class="muted">오늘의 학습</div>
+          <div style="font-size:23px;font-weight:700;margin-top:2px;">¡Hola! 스페인어 복습</div>
+        </div>
+        <div class="grid2">
+          <div class="stat"><div class="label">1부 · 단어 복습</div><div class="val">${wDue}<span style="font-size:14px;color:var(--text-3);">${fresh>0?` +${fresh}신규`:""}</span></div></div>
+          <div class="stat"><div class="label">2부 · 문장 암기</div><div class="val">${sDue}</div></div>
+          <div class="stat"><div class="label">학습한 단어</div><div class="val">${learnedCount()}<span style="font-size:14px;color:var(--text-3);">/${state.cards.length}</span></div></div>
+          <div class="stat"><div class="label">완전 숙달</div><div class="val">${masteredCount()}</div></div>
+        </div>
+        <button id="startBtn" class="btn btn-primary">${(wDue+fresh+sDue)>0?`학습 시작 (단어 ${wDue+fresh} · 문장 ${sDue})`:"오늘 학습 완료! 신규만 미리보기"}</button>
+        <div class="stat" style="background:var(--surface);border:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:14px;">하루 신규 단어</span>
+            <span id="npsVal" style="font-size:18px;font-weight:700;color:var(--red);">${newPerSession()}개</span>
+          </div>
+          <input id="npsRange" type="range" min="${NEW_MIN}" max="${NEW_MAX}" step="1" value="${newPerSession()}" style="width:100%;margin-top:10px;accent-color:var(--red);">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:2px;">
+            <span>적게 (느긋)</span><span>많게 (빠름)</span>
+          </div>
+          <div id="npsHint" class="muted" style="margin-top:8px;line-height:1.5;"></div>
+        </div>
+        <button id="importBtn" class="btn btn-sm">CSV로 문장 추가</button>
+        <button id="backupBtn" class="btn btn-sm">진도 백업 / 복원</button>
+        <button id="resetBtn" class="btn btn-sm" style="color:var(--text-3);">진도 초기화</button>
+        ${installBannerHTML()}
+      </div>`;
+    document.getElementById("startBtn").onclick=startSession;
+    document.getElementById("importBtn").onclick=buildImport;
+    document.getElementById("backupBtn").onclick=buildBackup;
+    document.getElementById("resetBtn").onclick=()=>{ if(confirm("모든 학습 진도를 초기화할까요?")) resetAll(); };
+    wireInstall();
+
+    const range=document.getElementById("npsRange");
+    const valEl=document.getElementById("npsVal");
+    const hintEl=document.getElementById("npsHint");
+    function updateHint(n){
+      const remaining=newCount();
+      const daysToIntro = remaining>0 ? Math.ceil(remaining/n) : 0;
+      let load;
+      if (n<=3) load="복습 부담이 가볍고 오래 지속하기 좋아요.";
+      else if (n<=6) load="권장 범위예요. 학습 속도와 부담의 균형이 좋습니다.";
+      else load="진도는 빠르지만 며칠 뒤 복습량이 많아질 수 있어요.";
+      const introMsg = remaining>0 ? `남은 신규 ${remaining}개를 모두 도입하는 데 약 ${daysToIntro}일. ` : "";
+      hintEl.textContent = introMsg + load;
+    }
+    updateHint(newPerSession());
+    range.addEventListener("input",()=>{
+      const n=parseInt(range.value,10);
+      valEl.textContent=n+"개";
+      updateHint(n);
+    });
+    range.addEventListener("change",()=>{
+      const n=parseInt(range.value,10);
+      state.newPerSession=n; saveState();
+      const wDue=wordDueCount(), sDue=sentDueCount(), fresh=Math.min(newCount(),n);
+      const sb=document.getElementById("startBtn");
+      if (sb) sb.textContent = (wDue+fresh+sDue)>0?`학습 시작 (단어 ${wDue+fresh} · 문장 ${sDue})`:"오늘 학습 완료! 신규만 미리보기";
+    });
+  }
+
+  function buildImport(){
+    pendingImport=[];
+    root().innerHTML=`
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="backBtn" class="btn" style="width:auto;padding:8px 12px;font-size:14px;">← 뒤로</button>
+          <div style="font-size:18px;font-weight:600;">CSV로 문장 추가</div>
+        </div>
+        <div class="stat" style="font-size:13px;color:var(--text-2);line-height:1.6;">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px;">CSV 형식</div>
+          첫 줄 헤더: <code>es,blank,ko,word,hint</code><br>
+          <span style="color:var(--text-3);">es=스페인어 문장 · blank=빈칸 단어 · ko=한국어 뜻 · word=단어뜻 · hint=영어힌트 (word·hint는 선택, blank는 문장에 포함돼야 함)</span>
+        </div>
+        <label class="card" style="display:block;padding:24px;text-align:center;border-style:dashed;border-color:var(--border-2);cursor:pointer;color:var(--text-2);">
+          파일 선택 (.csv)
+          <input id="fileInput" type="file" accept=".csv,text/csv" style="display:none;">
+        </label>
+        <div id="importResult"></div>
+      </div>`;
+    document.getElementById("backBtn").onclick=buildHome;
+    document.getElementById("fileInput").addEventListener("change",handleFile);
+  }
+
+  function buildBackup(){
+    root().innerHTML=`
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="backBtn" class="btn" style="width:auto;padding:8px 12px;font-size:14px;">← 뒤로</button>
+          <div style="font-size:18px;font-weight:600;">진도 백업 / 복원</div>
+        </div>
+        <div class="stat" style="font-size:13px;color:var(--text-2);line-height:1.6;">
+          기기를 바꾸거나 브라우저 데이터를 지우면 진도가 사라집니다. 백업 파일을 저장해 두면 언제든 그대로 되돌릴 수 있어요.
+        </div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">백업하기 (내보내기)</div>
+        <button id="exportBtn" class="btn btn-primary">백업 파일 만들기</button>
+        <div id="exportArea"></div>
+        <div style="font-size:14px;font-weight:600;margin-top:8px;border-top:1px solid var(--border);padding-top:16px;">복원하기 (가져오기)</div>
+        <div class="stat" style="background:var(--warn-bg);color:var(--warn);font-size:13px;">복원하면 현재 진도가 백업 내용으로 완전히 대체됩니다.</div>
+        <label class="card" style="display:block;padding:24px;text-align:center;border-style:dashed;border-color:var(--border-2);cursor:pointer;color:var(--text-2);">
+          백업 파일 선택 (.csv)
+          <input id="restoreInput" type="file" accept=".csv,text/csv" style="display:none;">
+        </label>
+        <div id="restoreResult"></div>
+      </div>`;
+    document.getElementById("backBtn").onclick=buildHome;
+    document.getElementById("exportBtn").onclick=doExport;
+    document.getElementById("restoreInput").addEventListener("change",handleRestore);
+  }
+
+  function doExport(){
+    const data=exportBackup();
+    const dateStr=new Date().toISOString().slice(0,10);
+    const fname=`espanol-srs-backup-${dateStr}.csv`;
+    const area=document.getElementById("exportArea");
+    // Web Share API (파일 공유) 우선 — 아이폰에서 '파일에 저장' 가능
+    const file=new File([data],fname,{type:"text/csv"});
+    let shareTried=false;
+    if (navigator.canShare && navigator.canShare({files:[file]})){
+      shareTried=true;
+      navigator.share({files:[file],title:"스페인어 학습 진도 백업"}).catch(()=>{ showFallback(); });
+    }
+    if (!shareTried) showFallback();
+    function showFallback(){
+      // 다운로드 링크 + 전체 텍스트(길게 눌러 복사) 제공
+      const blob=new Blob([data],{type:"text/csv"});
+      const url=URL.createObjectURL(blob);
+      area.innerHTML=`
+        <a id="dl" href="${url}" download="${fname}" class="btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">다운로드 (${fname})</a>
+        <div class="muted" style="margin-bottom:6px;">아이폰에서 다운로드가 안 되면, 아래 내용을 길게 눌러 전체 선택 → 복사한 뒤 메모 등에 붙여넣어 보관하세요.</div>
+        <textarea readonly style="width:100%;height:120px;font-family:var(--font);font-size:11px;padding:8px;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--surface);color:var(--text);" onclick="this.select()">${esc(data)}</textarea>`;
+    }
+    if (shareTried){
+      area.innerHTML=`<div class="muted">공유 시트가 열리면 "파일에 저장"을 선택하세요. 안 열리면 아래 버튼을 쓰세요.</div><button id="fb2" class="btn btn-sm" style="margin-top:8px;">다운로드/복사로 받기</button>`;
+      const b=document.getElementById("fb2"); if(b) b.onclick=showFallback;
+    }
+  }
+
+  function handleRestore(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      const box=document.getElementById("restoreResult");
+      try {
+        const n=importBackup(ev.target.result);
+        box.innerHTML=`<div class="stat" style="background:var(--success-bg);color:var(--success);text-align:center;font-weight:600;">${n}개 카드의 진도를 복원했어요!</div><button id="goHome2" class="btn" style="margin-top:12px;">홈으로</button>`;
+        const h=document.getElementById("goHome2"); if(h) h.onclick=buildHome;
+      } catch(err){
+        box.innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);font-size:14px;">복원 실패: ${esc(err.message)}<br><span style="font-size:12px;">이 앱에서 만든 백업 파일인지 확인해 주세요.</span></div>`;
+      }
+    };
+    reader.onerror=()=>{ document.getElementById("restoreResult").innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);">파일을 읽지 못했습니다.</div>`; };
+    reader.readAsText(file,"UTF-8");
+  }
+  function handleFile(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{ const {cards,errors}=csvToCards(ev.target.result); pendingImport=cards; renderImportPreview(cards,errors); };
+    reader.onerror=()=>{ document.getElementById("importResult").innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);">파일을 읽지 못했습니다.</div>`; };
+    reader.readAsText(file,"UTF-8");
+  }
+  function renderImportPreview(cards,errors){
+    const box=document.getElementById("importResult"); let html="";
+    if (cards.length>0){
+      html+=`<div style="font-size:14px;font-weight:600;margin-bottom:8px;">미리보기 (${cards.length}개 추가 가능)</div><div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;margin-bottom:12px;">`;
+      cards.slice(0,8).forEach(c=>{ const p=c.es.split(c.blank);
+        html+=`<div class="card" style="padding:10px 12px;"><div style="font-size:14px;">${esc(p[0])}<b style="color:var(--red);">${esc(c.blank)}</b>${esc(p.slice(1).join(c.blank))}</div><div class="muted" style="margin-top:2px;">${esc(c.ko)}</div></div>`; });
+      if (cards.length>8) html+=`<div class="muted" style="text-align:center;">…외 ${cards.length-8}개</div>`;
+      html+=`</div>`;
+    }
+    if (errors.length>0) html+=`<div class="stat" style="background:var(--warn-bg);color:var(--warn);font-size:13px;margin-bottom:12px;">건너뛴 행 ${errors.length}개<br><span style="font-size:12px;">${errors.slice(0,3).map(esc).join("<br>")}${errors.length>3?"<br>…":""}</span></div>`;
+    if (cards.length>0) html+=`<button id="confirmImport" class="btn btn-primary">${cards.length}개 문장 추가하기</button>`;
+    else if (errors.length>0) html+=`<div class="muted" style="text-align:center;">추가할 수 있는 문장이 없습니다.</div>`;
+    box.innerHTML=html;
+    const btn=document.getElementById("confirmImport");
+    if (btn) btn.onclick=()=>{
+      addCards(pendingImport);
+      box.innerHTML=`<div class="stat" style="background:var(--success-bg);color:var(--success);text-align:center;font-weight:600;">${pendingImport.length}개 문장이 추가되었습니다!</div><button id="goHome" class="btn" style="margin-top:12px;">홈으로</button>`;
+      document.getElementById("goHome").onclick=buildHome;
+    };
+  }
+
+  let phase="word"; // 현재 진행 중인 파트
+  function startSession(){
+    const s=buildSession();
+    queue=[...s.wordQ, ...s.sentQ];
+    queue._wordLen=s.wordQ.length;
+    if (queue.length===0){ buildDone(); return; }
+    qIdx=0; sessionWrong=[]; sessionStats={correct:0,wrong:0,near:0,sCorrect:0,sWrong:0};
+    queue._retried=false; queue._sRetried=false;
+    showCard();
+  }
+  function showCard(){
+    revealed=false;
+    const item=queue[qIdx];
+    const card=getCard(item.id);
+    phase=item.mode;
+    const progress=Math.round((qIdx/queue.length)*100);
+    const partLabel = item.mode==="word" ? "1부 · 단어" : "2부 · 문장";
+    if (item.mode==="word") return showWordCard(card, progress, partLabel);
+    return showSentenceCard(card, progress, partLabel);
+  }
+
+  function showWordCard(card, progress, partLabel){
+    const parts=card.es.split(card.blank);
+    const before=esc(parts[0]), after=esc(parts.slice(1).join(card.blank));
+    const hintLine=(card.hint||card.word)?`<div class="muted" style="margin-top:8px;">힌트: ${esc(card.hint||"")}${card.hint&&card.word?" → ":""}<b style="color:var(--text-2);">${esc(card.word||"")}</b></div>`:"";
+    root().innerHTML=`
+      <div class="row">
+        <div class="pbar"><div style="width:${progress}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);">
+          <span>${qIdx+1} / ${queue.length} · ${partLabel}</span><span>${card.w.reps===0?"새 단어":"복습 "+card.w.reps+"회차"}</span></div>
+        <div class="card" style="padding:22px 18px;">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:6px;">${esc(card.ko)}</div>
+          <div style="font-size:20px;line-height:1.6;">${before}<span id="blankSlot" class="blank">____</span>${after}</div>
+          ${hintLine}
+        </div>
+        <input id="answerInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="스페인어로 입력..." style="width:100%;font-size:18px;text-align:center;padding:12px;">
+        <div id="feedback"></div>
+        <div id="actions"></div>
+      </div>`;
+    const input=document.getElementById("answerInput");
+    input.focus();
+    input.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ revealed?next():checkAnswer(); }});
+    document.getElementById("actions").innerHTML=`<div class="grid2">
+        <button id="dontKnow" class="btn btn-sm" style="color:var(--text-2);">모르겠어요</button>
+        <button id="checkBtn" class="btn btn-sm btn-primary">확인</button></div>`;
+    document.getElementById("checkBtn").onclick=checkAnswer;
+    document.getElementById("dontKnow").onclick=()=>gradeWord(card,2,"dont");
+  }
+  function checkAnswer(){
+    const card=getCard(queue[qIdx].id);
+    const val=document.getElementById("answerInput").value;
+    if (val.trim()===card.blank.trim()) gradeWord(card,5,"exact");
+    else if (normalize(val)===normalize(card.blank)) gradeWord(card,4,"near");
+    else gradeWord(card,1,"wrong");
+  }
+  function gradeWord(card,quality,kind){
+    revealed=true;
+    if (kind==="exact") sessionStats.correct++;
+    else if (kind==="near"){ sessionStats.correct++; sessionStats.near++; }
+    else { sessionStats.wrong++; if(!sessionWrong.includes(card.id)) sessionWrong.push(card.id); }
+    sm2(card.w,quality); card.lastSeen=Date.now(); state.totalReviews++; saveState();
+    const slot=document.getElementById("blankSlot");
+    if (slot){ slot.textContent=card.blank; slot.style.borderBottom="none"; slot.style.color=quality>=4?"var(--success)":"var(--danger)"; }
+    document.getElementById("answerInput").disabled=true;
+    let msg,color,bg;
+    if (kind==="exact"){ msg="정답입니다!"; color="var(--success)"; bg="var(--success-bg)"; }
+    else if (kind==="near"){ msg=`거의 정답! 악센트 확인: <b>${esc(card.blank)}</b>`; color="var(--warn)"; bg="var(--warn-bg)"; }
+    else if (kind==="dont"){ msg=`정답: <b>${esc(card.blank)}</b>`; color="var(--text-2)"; bg="var(--surface-2)"; }
+    else { msg=`아쉬워요. 정답: <b>${esc(card.blank)}</b>`; color="var(--danger)"; bg="var(--danger-bg)"; }
+    document.getElementById("feedback").innerHTML=`<div class="stat" style="background:${bg};color:${color};text-align:center;font-size:14px;">${msg}</div>`;
+    const nextLabel=card.w.interval===0?"이번 세션에 다시 나와요":`다음 복습: ${card.w.interval}일 후`;
+    document.getElementById("actions").innerHTML=`<div class="muted" style="text-align:center;margin-bottom:10px;">${nextLabel}</div><button id="nextBtn" class="btn btn-primary">다음</button>`;
+    const nb=document.getElementById("nextBtn"); nb.onclick=next; nb.focus();
+  }
+
+  function showSentenceCard(card, progress, partLabel){
+    root().innerHTML=`
+      <div class="row">
+        <div class="pbar"><div style="width:${progress}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);">
+          <span>${qIdx+1} / ${queue.length} · ${partLabel}</span><span>${card.s.reps===0?"문장 첫 암기":"문장 복습 "+card.s.reps+"회차"}</span></div>
+        <div class="card" style="padding:22px 18px;text-align:center;">
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">아래 뜻을 보고 스페인어 문장 전체를 떠올려 보세요</div>
+          <div style="font-size:17px;color:var(--text);line-height:1.6;">${esc(card.ko)}</div>
+          <div id="sentReveal" style="margin-top:16px;font-size:20px;line-height:1.6;color:var(--red);font-weight:600;visibility:hidden;">${esc(card.es)}</div>
+        </div>
+        <div id="actions"></div>
+      </div>`;
+    document.getElementById("actions").innerHTML=`<button id="revealBtn" class="btn btn-primary">정답 문장 보기</button>`;
+    document.getElementById("revealBtn").onclick=()=>{
+      const r=document.getElementById("sentReveal"); if(r) r.style.visibility="visible";
+      document.getElementById("actions").innerHTML=`
+        <div class="muted" style="text-align:center;margin-bottom:10px;">얼마나 떠올렸나요?</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+          <button id="sNo" class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);">못 외움</button>
+          <button id="sMid" class="btn btn-sm" style="color:var(--warn);border-color:var(--warn);">가물가물</button>
+          <button id="sYes" class="btn btn-sm" style="color:var(--success);border-color:var(--success);">기억남</button>
+        </div>`;
+      document.getElementById("sNo").onclick=()=>gradeSentence(card,1);
+      document.getElementById("sMid").onclick=()=>gradeSentence(card,3);
+      document.getElementById("sYes").onclick=()=>gradeSentence(card,5);
+    };
+  }
+  function gradeSentence(card,quality){
+    if (quality>=4) sessionStats.sCorrect++;
+    else if (quality<3){ sessionStats.sWrong++; }
+    sm2(card.s,quality); card.lastSeen=Date.now(); state.totalReviews++; saveState();
+    const nextLabel=card.s.interval===0?"이번 세션에 다시 나와요":`다음 문장 복습: ${card.s.interval}일 후`;
+    // 문장 오답(가물/못외움 미만)이면 이번 세션 끝에 재시도용 표시
+    if (quality<3){ if(!sessionWrong.some(x=>x==="S"+card.id)) sessionWrong.push("S"+card.id); }
+    document.getElementById("actions").innerHTML=`<div class="muted" style="text-align:center;margin-bottom:10px;">${nextLabel}</div><button id="nextBtn" class="btn btn-primary">다음</button>`;
+    const nb=document.getElementById("nextBtn"); nb.onclick=next; nb.focus();
+  }
+
+  function next(){
+    qIdx++;
+    // 단어 파트 끝에서 오답 단어 재시도 한 번
+    if (qIdx>=queue.length){
+      const retryW=sessionWrong.filter(id=>typeof id==="number").filter(id=>{const c=getCard(id);return c&&c.w.interval===0;});
+      const retryS=sessionWrong.filter(id=>typeof id==="string"&&id[0]==="S").map(s=>parseInt(s.slice(1),10)).filter(id=>{const c=getCard(id);return c&&c.s.interval===0;});
+      let added=[];
+      if (retryW.length>0 && !queue._retried){ added=added.concat(retryW.map(id=>({id,mode:"word"}))); queue._retried=true; }
+      if (retryS.length>0 && !queue._sRetried){ added=added.concat(retryS.map(id=>({id,mode:"sentence"}))); queue._sRetried=true; }
+      if (added.length>0){ queue=queue.concat(shuffleNoAdjacentBy(added)); }
+    }
+    if (qIdx>=queue.length){ buildDone(); return; }
+    showCard();
+  }
+  function buildDone(){
+    const wTotal=sessionStats.correct+sessionStats.wrong;
+    const rate=wTotal>0?Math.round((sessionStats.correct/wTotal)*100):0;
+    const sTotal=(sessionStats.sCorrect||0)+(sessionStats.sWrong||0);
+    const td=todayStart();
+    if (state.lastStudyDay!==td){
+      if (state.lastStudyDay===td-DAY) state.streak++; else state.streak=1;
+      state.lastStudyDay=td; saveState();
+    }
+    const sentLine = sTotal>0 ? `<div class="muted">문장 암기: 기억남 ${sessionStats.sCorrect||0} / ${sTotal}</div>` : "";
+    root().innerHTML=`
+      <div class="row" style="text-align:center;padding:12px 0;">
+        <div style="font-size:23px;font-weight:700;">¡Buen trabajo! 🎉</div>
+        <div style="font-size:14px;color:var(--text-2);">오늘 학습을 완료했어요</div>
+        <div class="grid2">
+          <div class="stat"><div class="label">단어 정답률</div><div class="val">${wTotal>0?rate+"%":"–"}</div></div>
+          <div class="stat"><div class="label">연속 학습</div><div class="val">${state.streak}일</div></div>
+        </div>
+        <div class="muted">단어: 정답 ${sessionStats.correct} · 오답 ${sessionStats.wrong}${sessionStats.near>0?` · 악센트 실수 ${sessionStats.near}`:""}</div>
+        ${sentLine}
+        <button id="homeBtn" class="btn btn-primary">홈으로</button>
+      </div>`;
+    document.getElementById("homeBtn").onclick=buildHome;
+  }
+
+  // ---- PWA wiring ----
+  window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; const b=document.getElementById("installBtn"); if(!b && root().querySelector(".row")) buildHome(); });
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  }
+
+  loadState();
+  buildHome();
+})();
+</script>
+</body>
+</html>
