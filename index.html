@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Español SRS</title>
+<meta name="theme-color" content="#C8412B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Español SRS">
+<style>
+  :root {
+    --red: #C8412B; --red-dark: #7A1E12; --yellow: #F0C420;
+    --bg: #FBFAF7; --surface: #FFFFFF; --surface-2: #F2EFE9;
+    --text: #1F1B18; --text-2: #6B6259; --text-3: #9A9088;
+    --border: rgba(31,27,24,0.12); --border-2: rgba(31,27,24,0.22);
+    --success-bg: #E7F3E4; --success: #2E6B2A;
+    --warn-bg: #FBF0D8; --warn: #8A5A0B;
+    --danger-bg: #FBE7E3; --danger: #A8311E;
+    --info-bg: #FBE9E5; --info: #C8412B;
+    --radius: 10px; --radius-lg: 14px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1715; --surface: #262220; --surface-2: #2F2A27;
+      --text: #F2EEE9; --text-2: #B5ACA3; --text-3: #847A71;
+      --border: rgba(255,255,255,0.14); --border-2: rgba(255,255,255,0.24);
+      --success-bg: #1E3320; --success: #8FD18C;
+      --warn-bg: #3A2E16; --warn: #F0C879;
+      --danger-bg: #3A201B; --danger: #F0A294;
+      --info-bg: #3A211C; --info: #F0A294;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body {
+    min-height: 100vh; min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+  button { font-family: var(--font); }
+  input { font-family: var(--font); background: var(--surface); color: var(--text); border: 1px solid var(--border-2); border-radius: var(--radius); outline: none; }
+  input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,65,43,0.15); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.92em; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .stat { background: var(--surface-2); border-radius: var(--radius); padding: 14px; }
+  .stat .label { font-size: 13px; color: var(--text-2); }
+  .stat .val { font-size: 24px; font-weight: 600; margin-top: 2px; }
+  .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border-radius: var(--radius-lg); border: 1px solid var(--border-2); background: var(--surface); color: var(--text); cursor: pointer; transition: transform 0.08s; }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-sm { padding: 11px; font-size: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row { display: flex; flex-direction: column; gap: 14px; }
+  .muted { color: var(--text-3); font-size: 13px; }
+  .pbar { height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .pbar > div { height: 100%; background: var(--red); transition: width 0.3s; }
+  .blank { display: inline-block; min-width: 84px; border-bottom: 2px solid var(--red); text-align: center; color: var(--red); font-weight: 600; }
+  .install-banner { position: sticky; bottom: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1 class="sr-only">스페인어 문맥 기반 간격 반복 학습 앱</h1>
+  <div id="app"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DEFAULT_CARDS = [
+    { es: "Quiero comprar pan.", blank: "comprar", ko: "나는 빵을 사고 싶다.", word: "사다", hint: "to buy" },
+    { es: "Ella vive en Madrid.", blank: "vive", ko: "그녀는 마드리드에 산다.", word: "살다", hint: "lives" },
+    { es: "Necesito agua, por favor.", blank: "agua", ko: "물이 필요해요, 부탁합니다.", word: "물", hint: "water" },
+    { es: "Hoy hace mucho calor.", blank: "calor", ko: "오늘은 매우 덥다.", word: "더위", hint: "heat" },
+    { es: "Mi casa es pequeña.", blank: "casa", ko: "내 집은 작다.", word: "집", hint: "house" },
+    { es: "Vamos a comer ahora.", blank: "comer", ko: "지금 먹으러 가자.", word: "먹다", hint: "to eat" },
+    { es: "El gato duerme mucho.", blank: "duerme", ko: "고양이는 많이 잔다.", word: "자다", hint: "sleeps" },
+    { es: "Tengo dos hermanos.", blank: "hermanos", ko: "나는 형제가 둘 있다.", word: "형제들", hint: "siblings" },
+    { es: "¿Dónde está el baño?", blank: "baño", ko: "화장실이 어디예요?", word: "화장실", hint: "bathroom" },
+    { es: "Hablo un poco de español.", blank: "español", ko: "나는 스페인어를 조금 한다.", word: "스페인어", hint: "Spanish" },
+    { es: "Me gusta leer libros.", blank: "leer", ko: "나는 책 읽는 것을 좋아한다.", word: "읽다", hint: "to read" },
+    { es: "La comida está deliciosa.", blank: "deliciosa", ko: "음식이 맛있다.", word: "맛있는", hint: "delicious" },
+    { es: "Trabajo todos los días.", blank: "Trabajo", ko: "나는 매일 일한다.", word: "일하다", hint: "I work" },
+    { es: "Compré una camisa nueva.", blank: "camisa", ko: "나는 새 셔츠를 샀다.", word: "셔츠", hint: "shirt" },
+    { es: "El tren llega tarde.", blank: "tren", ko: "기차가 늦게 도착한다.", word: "기차", hint: "train" },
+    { es: "Quiero aprender a cocinar.", blank: "cocinar", ko: "나는 요리를 배우고 싶다.", word: "요리하다", hint: "to cook" },
+    { es: "Hace frío en invierno.", blank: "frío", ko: "겨울에는 춥다.", word: "추위", hint: "cold" },
+    { es: "Ella es muy amable.", blank: "amable", ko: "그녀는 매우 친절하다.", word: "친절한", hint: "kind" },
+    { es: "Necesito dinero para el viaje.", blank: "dinero", ko: "나는 여행을 위해 돈이 필요하다.", word: "돈", hint: "money" },
+    { es: "Vamos a la playa mañana.", blank: "playa", ko: "우리는 내일 해변에 간다.", word: "해변", hint: "beach" },
+    { es: "El médico es muy bueno.", blank: "médico", ko: "그 의사는 매우 좋다.", word: "의사", hint: "doctor" },
+    { es: "Abre la ventana, por favor.", blank: "ventana", ko: "창문을 열어주세요.", word: "창문", hint: "window" },
+    { es: "Estudio en la universidad.", blank: "universidad", ko: "나는 대학에서 공부한다.", word: "대학", hint: "university" },
+    { es: "Mi familia es grande.", blank: "familia", ko: "우리 가족은 대가족이다.", word: "가족", hint: "family" },
+    { es: "Bebo café por la mañana.", blank: "café", ko: "나는 아침에 커피를 마신다.", word: "커피", hint: "coffee" }
+  ];
+
+  const SESSION_MAX = 20, DAY = 86400000;
+  const NEW_MIN = 1, NEW_MAX = 10, NEW_DEFAULT = 4;
+  const STORE_KEY = "espanol_srs_state_v1";
+
+  // ---- 스케줄러 파라미터 (Anki 기본값 참고) ----
+  const GRAD_INTERVAL = 1;        // 첫 성공 후 간격(일)
+  const SECOND_INTERVAL = 3;      // 두 번째 성공 후 간격(일)
+  const LAPSE_MULT = 0.4;         // 실패 시 기존 간격의 40%로 복귀 (완전 초기화 대신)
+  const MIN_LAPSE_INTERVAL = 1;
+  const HARD_MULT = 1.2;          // "가물가물"(q=3) 배수
+  const EASY_BONUS = 1.15;        // 완벽 정답(q=5) 보너스
+  const MAX_INTERVAL = 365;
+  const FUZZ_RATIO = 0.05;        // 같은 날 몰림 방지
+  const LEECH_THRESHOLD = 8;      // 누적 실패 8회 → 자동 보류
+  const TYPO_DISTANCE = 2;        // 이 거리 이하면 "오타 같아요" 안내
+
+  function newPerSession(){
+    const n = state && state.newPerSession;
+    return (typeof n === "number" && n >= NEW_MIN && n <= NEW_MAX) ? n : NEW_DEFAULT;
+  }
+
+  let state = null, queue = [], qIdx = 0, sessionWrong = [];
+  let sessionStats = { correct: 0, wrong: 0, near: 0 }, revealed = false, pendingImport = [];
+  let deferredPrompt = null;
+  let retryDone = { w: false, s: false };   // 오답 재시도는 파트별 1회 (배열 속성 대신 모듈 변수)
+  let undoState = null;                     // 직전 채점 스냅샷
+
+  // 악센트를 모두 제거 (ñ 포함) — 최종 관대 비교용
+  function normalize(s){ return (s||"").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+  // 악센트만 제거하고 ñ 는 보존 — ñ 는 악센트가 아니라 별개 글자이기 때문
+  function deaccent(s){
+    return (s||"").toLowerCase().trim()
+      .replace(/ñ/g,"\u0001")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/\u0001/g,"ñ");
+  }
+  // 글자 단위 편집 거리 + 정렬 결과 (오타 판별과 diff 표시에 사용)
+  function diffOps(a,b){
+    const m=a.length, n=b.length, d=[], bt=[];
+    for (let i=0;i<=m;i++){ d.push(new Array(n+1).fill(0)); bt.push(new Array(n+1).fill("")); }
+    for (let i=1;i<=m;i++){ d[i][0]=i; bt[i][0]="D"; }
+    for (let j=1;j<=n;j++){ d[0][j]=j; bt[0][j]="I"; }
+    for (let i=1;i<=m;i++) for (let j=1;j<=n;j++){
+      const cost = a[i-1]===b[j-1] ? 0 : 1;
+      let best = d[i-1][j-1]+cost, op = cost ? "S" : "M";
+      if (d[i-1][j]+1 < best){ best=d[i-1][j]+1; op="D"; }
+      if (d[i][j-1]+1 < best){ best=d[i][j-1]+1; op="I"; }
+      d[i][j]=best; bt[i][j]=op;
+    }
+    const ops=[]; let i=m, j=n;
+    while (i>0 || j>0){
+      const op=bt[i][j]; ops.push(op);
+      if (op==="M"||op==="S"){ i--; j--; } else if (op==="D"){ i--; } else { j--; }
+    }
+    ops.reverse();
+    return { dist:d[m][n], ops };
+  }
+  // 틀린 글자를 강조한 HTML 두 벌(입력값 / 정답)을 만든다
+  function diffHTML(a,b){
+    const { dist, ops } = diffOps(a,b);
+    const markU = t=>`<span style="background:rgba(200,65,43,0.18);border-radius:3px;">${esc(t)}</span>`;
+    const markA = t=>`<span style="background:rgba(46,107,42,0.20);border-radius:3px;font-weight:700;">${esc(t)}</span>`;
+    let i=0, j=0, ua="", ub="";
+    ops.forEach(op=>{
+      if (op==="M"){ ua+=esc(a[i++]); ub+=esc(b[j++]); }
+      else if (op==="S"){ ua+=markU(a[i++]); ub+=markA(b[j++]); }
+      else if (op==="D"){ ua+=markU(a[i++]); }
+      else { ub+=markA(b[j++]); }
+    });
+    return { dist, user:ua, answer:ub };
+  }
+  function fuzzDays(d){
+    if (d < 5) return d;
+    const span = Math.max(1, Math.round(d*FUZZ_RATIO));
+    return Math.max(1, d + Math.round((Math.random()*2-1)*span));
+  }
+  function todayStart(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+  function esc(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  // ---- 저장 (localStorage) ----
+  function newTrack(){ return { ef:2.5, interval:0, reps:0, due:null, lapses:0, successes:0, relearn:false, pending:0 }; }
+  function makeCard(id, c){
+    const w = newTrack(); w.introduced = false;
+    return { id, es:c.es, blank:c.blank, ko:c.ko, word:c.word, hint:c.hint,
+      w, s:newTrack(), lastSeen:null, suspended:false };
+  }
+  // v2 필드 보강: 기존 진도(due/interval/ef)는 그대로 두고 새 필드만 채운다
+  function migrateTrack(t){
+    if (t.lapses == null) t.lapses = 0;
+    if (t.successes == null) t.successes = t.reps || 0;   // 과거 성공 횟수를 reps로 근사
+    if (t.pending == null) t.pending = 0;
+    if (t.relearn == null) t.relearn = (t.interval === 0 && t.reps === 0 && t.due != null);
+    return t;
+  }
+  // 구버전(단어 SRS가 카드 최상위에 있던 형태)을 단어/문장 분리형으로 변환
+  function migrateCard(c){
+    let mc = c;
+    if (!(c.w && c.s)){
+      mc = { id:c.id, es:c.es, blank:c.blank, ko:c.ko, word:c.word, hint:c.hint,
+        w:{ ef:c.ef!=null?c.ef:2.5, interval:c.interval||0, reps:c.reps||0, due:c.due!=null?c.due:null, introduced:!!c.introduced },
+        s:newTrack(), lastSeen:c.lastSeen!=null?c.lastSeen:null };
+      if (mc.w.introduced && mc.s.due===null) mc.s.due = todayStart();
+    }
+    migrateTrack(mc.w); migrateTrack(mc.s);
+    if (mc.suspended == null) mc.suspended = false;
+    // 과거 버그 복구: '학습함' 표시만 되고 한 번도 출제되지 않아 영영 나오지 않던 카드
+    if (mc.w.introduced && mc.w.due === null && !(mc.w.reps > 0)){
+      if ((mc.s.reps||0) > 0 || mc.lastSeen != null) mc.w.due = todayStart();  // 이미 접한 카드는 바로 출제
+      else { mc.w.introduced = false; mc.s.due = null; }                        // 전혀 본 적 없으면 신규로 되돌림
+    }
+    return mc;
+  }
+  function loadState(){
+    try { const raw = localStorage.getItem(STORE_KEY); if (raw) state = JSON.parse(raw); }
+    catch(e){ state = null; }
+    if (!state){
+      state = { cards: DEFAULT_CARDS.map((c,i)=>makeCard(i,c)),
+        streak:0, lastStudyDay:null, totalReviews:0, nextId:DEFAULT_CARDS.length,
+        newPerSession:NEW_DEFAULT, studyDays:[] };
+      saveState();
+    }
+    if (state.nextId === undefined) state.nextId = state.cards.length;
+    if (state.newPerSession === undefined) state.newPerSession = NEW_DEFAULT;
+    if (!Array.isArray(state.studyDays)) state.studyDays = state.lastStudyDay!=null ? [state.lastStudyDay] : [];
+    state.cards = state.cards.map(migrateCard);
+  }
+  function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} }
+  function resetAll(){ try { localStorage.removeItem(STORE_KEY); } catch(e){} state=null; loadState(); buildHome(); }
+  function addCards(newCards){
+    let added = 0;
+    newCards.forEach(c=>{ state.cards.push(makeCard(state.nextId++, c)); added++; });
+    saveState();
+    return added;
+  }
+  // 이미 있는 문장(스페인어+빈칸 조합)인지 확인
+  function isDuplicate(c){
+    const key = normalize(c.es)+"|"+normalize(c.blank);
+    return state.cards.some(x=>normalize(x.es)+"|"+normalize(x.blank) === key);
+  }
+
+  // ---- 백업/복원 ----
+  const BK_COLS=["id","es","blank","ko","word","hint",
+    "w_ef","w_interval","w_reps","w_due","w_introduced","w_lapses","w_successes",
+    "s_ef","s_interval","s_reps","s_due","s_lapses","s_successes",
+    "lastSeen","suspended"];
+  function csvField(s){ s=String(s==null?"":s); return /[",\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+  function exportBackup(){
+    const rows=[BK_COLS.slice()];
+    const meta=JSON.stringify({schema:2, streak:state.streak, lastStudyDay:state.lastStudyDay,
+      totalReviews:state.totalReviews, nextId:state.nextId, newPerSession:state.newPerSession,
+      studyDays:state.studyDays||[]});
+    rows.push(["__meta__", meta].concat(new Array(BK_COLS.length-2).fill("")));
+    state.cards.forEach(c=>{
+      rows.push([c.id,c.es,c.blank,c.ko,c.word,c.hint,
+        c.w.ef,c.w.interval,c.w.reps,c.w.due==null?"":c.w.due,c.w.introduced?1:0,c.w.lapses||0,c.w.successes||0,
+        c.s.ef,c.s.interval,c.s.reps,c.s.due==null?"":c.s.due,c.s.lapses||0,c.s.successes||0,
+        c.lastSeen==null?"":c.lastSeen, c.suspended?1:0]);
+    });
+    return "\uFEFF"+rows.map(r=>r.map(csvField).join(",")).join("\r\n");
+  }
+  function importBackup(text){
+    const rows=parseCSV(text);
+    if (rows.length<2) throw new Error("내용이 없습니다");
+    const header=rows[0].map(h=>h.trim());
+    const idx={}; BK_COLS.forEach(c=>idx[c]=header.indexOf(c));
+    if (idx.id<0||idx.es<0||idx.w_ef<0) throw new Error("백업 파일 형식이 아닙니다");
+    const num=(v,d)=>{const n=parseFloat(v);return isNaN(n)?d:n;};
+    // 구버전 백업(신규 컬럼 없음)도 그대로 읽히도록 안전 접근
+    const g=(r,k)=>idx[k]>=0 ? r[idx[k]] : undefined;
+    const flag=v=>v==="1"||v===1;
+    let meta=null; const cards=[];
+    for (let i=1;i<rows.length;i++){
+      const r=rows[i];
+      if (r[idx.id]==="__meta__"){ try{ meta=JSON.parse(r[idx.es]); }catch(e){ meta=null; } continue; }
+      if (!r[idx.es]) continue;
+      const wReps=num(g(r,"w_reps"),0), sReps=num(g(r,"s_reps"),0);
+      cards.push({
+        id:num(r[idx.id],cards.length), es:r[idx.es],blank:g(r,"blank"),ko:g(r,"ko"),word:g(r,"word")||"",hint:g(r,"hint")||"",
+        w:{ef:num(g(r,"w_ef"),2.5),interval:num(g(r,"w_interval"),0),reps:wReps,
+           due:g(r,"w_due")===""||g(r,"w_due")===undefined?null:num(g(r,"w_due"),null),
+           introduced:flag(g(r,"w_introduced")),
+           lapses:num(g(r,"w_lapses"),0), successes:num(g(r,"w_successes"),wReps)},
+        s:{ef:num(g(r,"s_ef"),2.5),interval:num(g(r,"s_interval"),0),reps:sReps,
+           due:g(r,"s_due")===""||g(r,"s_due")===undefined?null:num(g(r,"s_due"),null),
+           lapses:num(g(r,"s_lapses"),0), successes:num(g(r,"s_successes"),sReps)},
+        lastSeen:g(r,"lastSeen")===""||g(r,"lastSeen")===undefined?null:num(g(r,"lastSeen"),null),
+        suspended:flag(g(r,"suspended"))
+      });
+    }
+    if (cards.length===0) throw new Error("복원할 카드가 없습니다");
+    const m=meta||{};
+    state={ cards:cards.map(migrateCard), streak:m.streak||0, lastStudyDay:m.lastStudyDay!=null?m.lastStudyDay:null,
+      totalReviews:m.totalReviews||0, nextId:m.nextId!=null?m.nextId:cards.length,
+      newPerSession:m.newPerSession||NEW_DEFAULT,
+      studyDays:Array.isArray(m.studyDays)?m.studyDays:(m.lastStudyDay!=null?[m.lastStudyDay]:[]) };
+    if (state.nextId<=Math.max(...cards.map(c=>c.id))) state.nextId=Math.max(...cards.map(c=>c.id))+1;
+    saveState();
+    return cards.length;
+  }
+
+  // ---- CSV ----
+  function parseCSV(text){
+    const rows=[]; let row=[], field="", inQ=false;
+    text = text.replace(/^\uFEFF/,"");
+    for (let i=0;i<text.length;i++){
+      const c=text[i], n=text[i+1];
+      if (inQ){
+        if (c==='"' && n==='"'){ field+='"'; i++; }
+        else if (c==='"'){ inQ=false; }
+        else field+=c;
+      } else {
+        if (c==='"') inQ=true;
+        else if (c===','){ row.push(field); field=""; }
+        else if (c==='\r'){}
+        else if (c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+        else field+=c;
+      }
+    }
+    if (field.length>0 || row.length>0){ row.push(field); rows.push(row); }
+    return rows.filter(r=>r.length>1 || (r.length===1 && r[0].trim()!==""));
+  }
+  function csvToCards(text){
+    const rows = parseCSV(text);
+    if (rows.length<2) return { cards:[], errors:["데이터 행이 없습니다."] };
+    const header = rows[0].map(h=>h.trim().toLowerCase());
+    const idx = { es:header.indexOf("es"), blank:header.indexOf("blank"), ko:header.indexOf("ko"), word:header.indexOf("word"), hint:header.indexOf("hint") };
+    if (idx.es<0 || idx.blank<0 || idx.ko<0) return { cards:[], errors:["헤더에 es, blank, ko 컬럼이 필요합니다."] };
+    const cards=[], errors=[]; const seen=new Set(); let dupes=0;
+    for (let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const es=(r[idx.es]||"").trim(), blank=(r[idx.blank]||"").trim(), ko=(r[idx.ko]||"").trim(),
+        word=idx.word>=0?(r[idx.word]||"").trim():"", hint=idx.hint>=0?(r[idx.hint]||"").trim():"";
+      if (!es||!blank||!ko){ errors.push(`${i+1}행: 필수 항목 누락`); continue; }
+      if (!es.includes(blank)){ errors.push(`${i+1}행: 빈칸 단어가 문장에 없음`); continue; }
+      const key=normalize(es)+"|"+normalize(blank);
+      if (seen.has(key) || isDuplicate({es,blank})){ dupes++; continue; }   // 같은 문장 중복 추가 방지
+      seen.add(key);
+      cards.push({es,blank,ko,word,hint});
+    }
+    if (dupes>0) errors.push(`이미 있는 문장 ${dupes}개는 건너뛰었습니다`);
+    return { cards, errors };
+  }
+
+  // ---- 스케줄러 (트랙 t = card.w 또는 card.s) ----
+  // SM-2의 EF 갱신식은 유지하되, 간격은 Anki처럼 첫 성공 이후 곧바로 EF 곱셈으로 늘린다.
+  // 실패해도 완전 초기화하지 않고 기존 간격의 일부를 "예약"해 두었다가 재학습 성공 시 복원한다.
+  function schedule(t,q){
+    migrateTrack(t);
+    let ef = t.ef + (0.1-(5-q)*(0.08+(5-q)*0.02));
+    if (ef < 1.3) ef = 1.3;
+    t.ef = Math.round(ef*100)/100;
+
+    if (q < 3){
+      // 실패 → 재학습 단계. 기존 간격의 40%를 복귀 목표로 남겨 둔다.
+      if (t.interval > 0) t.pending = Math.max(MIN_LAPSE_INTERVAL, Math.round(t.interval*LAPSE_MULT));
+      else if (!t.relearn) t.pending = 0;
+      t.lapses += 1;
+      t.reps = 0;
+      t.interval = 0;
+      t.relearn = true;
+      t.due = Date.now();   // 이번 세션 안에서 다시 물어본다
+      return t;
+    }
+
+    t.successes += 1;
+    const prev = t.interval;
+    let iv;
+    if (t.relearn){
+      iv = t.pending > 0 ? t.pending : GRAD_INTERVAL;   // 실패 이전 간격의 일부로 복귀
+      t.relearn = false; t.pending = 0; t.reps = 1;
+    } else {
+      t.reps += 1;
+      if (t.reps === 1) iv = GRAD_INTERVAL;
+      else if (t.reps === 2) iv = SECOND_INTERVAL;
+      else if (q === 3) iv = Math.max(t.interval*HARD_MULT, t.interval+1);  // 가물가물 → 완만하되 정체 없이
+      else if (q >= 5) iv = t.interval * t.ef * EASY_BONUS;     // 완벽 → 보너스
+      else iv = t.interval * t.ef;                              // 근접 정답
+    }
+    iv = Math.round(iv);
+    if (iv < 1) iv = 1;
+    if (iv > MAX_INTERVAL) iv = MAX_INTERVAL;
+    let fz = fuzzDays(iv);
+    if (prev > 0 && iv >= prev) fz = Math.max(fz, prev);   // 맞혔는데 간격이 줄지 않도록
+    t.interval = Math.min(MAX_INTERVAL, Math.max(1, fz));
+    t.due = todayStart() + t.interval*DAY;
+    return t;
+  }
+  // 누적 실패가 잦은 카드는 자동 보류해 세션 시간을 잡아먹지 않게 한다
+  function checkLeech(card){
+    if (card.suspended) return false;
+    if (card.w.lapses >= LEECH_THRESHOLD || card.s.lapses >= LEECH_THRESHOLD){
+      card.suspended = true;
+      return true;
+    }
+    return false;
+  }
+
+  // 세션에 담길 항목 수를 미리 계산 (상태를 바꾸지 않음 — 홈 화면 표시용)
+  function planCounts(){
+    const now = Date.now();
+    const active = state.cards.filter(c=>!c.suspended);
+    const wDueAll = active.filter(c=>c.w.introduced && c.w.due!==null && c.w.due<=now).length;
+    const wReview = Math.min(wDueAll, SESSION_MAX);
+    // 밀린 복습이 많은 날은 신규 도입을 자동으로 줄인다 (신규 1장 = 큐 2칸)
+    const room = Math.max(0, SESSION_MAX - wDueAll);
+    const fresh = Math.min(newPerSession(), Math.floor(room/2),
+                           active.filter(c=>!c.w.introduced).length);
+    const sDueAll = active.filter(c=>c.w.introduced && c.s.due!==null && c.s.due<=now).length;
+    const sent = Math.min(sDueAll, SESSION_MAX);
+    return { wDueAll, wReview, fresh, sDueAll, sent,
+             backlog:(wDueAll-wReview)+(sDueAll-sent) };
+  }
+
+  function buildSession(){
+    const now = Date.now();
+    const active = state.cards.filter(c=>!c.suspended);
+    const plan = planCounts();
+
+    // 1부: 단어 — 오래 밀린 것부터 채운 뒤 상한 적용 (무작위로 잘려 영영 안 나오는 문제 방지)
+    const wDue = active.filter(c=>c.w.introduced && c.w.due!==null && c.w.due<=now)
+                       .sort((a,b)=>a.w.due-b.w.due)
+                       .slice(0, SESSION_MAX);
+    let wordQ = wDue.map(c=>({id:c.id, mode:"word"}));
+    // 신규 도입은 상한을 적용한 "뒤에" 확정한다 — 큐에서 잘린 카드가 학습됨으로 기록되지 않도록
+    const wNew = active.filter(c=>!c.w.introduced).slice(0, plan.fresh);
+    wNew.forEach(c=>{
+      c.w.introduced = true;
+      wordQ.push({id:c.id, mode:"word"});
+      wordQ.push({id:c.id, mode:"word"});
+    });
+    wordQ = shuffleNoAdjacentBy(wordQ);
+
+    // 2부: 문장 — 단어를 한 번 이상 맞힌 카드만, 역시 밀린 순서대로
+    const sDue = active.filter(c=>c.w.introduced && c.s.due!==null && c.s.due<=now)
+                       .sort((a,b)=>a.s.due-b.s.due)
+                       .slice(0, SESSION_MAX);
+    let sentQ = shuffleNoAdjacentBy(sDue.map(c=>({id:c.id, mode:"sentence"})));
+
+    saveState();   // 도입 상태를 즉시 보존
+    return { wordQ, sentQ };
+  }
+  function shuffleNoAdjacentBy(arr){
+    if (arr.length<2) return arr;
+    let best=null;
+    for (let t=0;t<30;t++){
+      const a=[...arr];
+      for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+      let ok=true; for(let i=1;i<a.length;i++){if(a[i].id===a[i-1].id){ok=false;break;}}
+      if (ok) return a; best=a;
+    }
+    return best;
+  }
+  function getCard(id){ return state.cards.find(c=>c.id===id); }
+  function newCount(){ return state.cards.filter(c=>!c.w.introduced && !c.suspended).length; }
+  function learnedCount(){ return state.cards.filter(c=>c.w.introduced).length; }
+  // 성공 누적 횟수 기준 — 한 번 실패했다고 숙달 표시가 사라지지 않게
+  function masteredCount(){ return state.cards.filter(c=>c.w.successes>=4 && c.s.successes>=4).length; }
+  function suspendedCount(){ return state.cards.filter(c=>c.suspended).length; }
+  function weeklyDays(){
+    const from = todayStart()-6*DAY;
+    return (state.studyDays||[]).filter(d=>d>=from).length;
+  }
+
+  const root=()=>document.getElementById("app");
+
+  function installBannerHTML(){
+    if (!deferredPrompt) return "";
+    return `<div class="install-banner"><button id="installBtn" class="btn btn-sm" style="border-color:var(--red);color:var(--red);">홈 화면에 설치하기</button></div>`;
+  }
+  function wireInstall(){
+    const b=document.getElementById("installBtn");
+    if (b) b.onclick=async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; buildHome(); };
+  }
+
+  function sessionLabel(p){
+    return (p.wReview+p.fresh+p.sent) > 0
+      ? `학습 시작 (단어 ${p.wReview+p.fresh} · 문장 ${p.sent})`
+      : "오늘 학습 완료! 신규만 미리보기";
+  }
+
+  function buildHome(){
+    const p = planCounts();
+    const susp = suspendedCount();
+    const backlogLine = p.backlog>0
+      ? `<div class="stat" style="background:var(--warn-bg);color:var(--warn);font-size:13px;line-height:1.5;">밀린 항목 ${p.backlog}개는 다음 세션으로 넘어갑니다. 오래 밀린 것부터 먼저 나와요.</div>`
+      : "";
+    const suspLine = susp>0
+      ? `<div class="stat" style="background:var(--danger-bg);color:var(--danger);font-size:13px;line-height:1.5;">
+           반복해서 막히는 카드 ${susp}개를 잠시 보류했어요.
+           <button id="unsuspendBtn" class="btn btn-sm" style="margin-top:8px;background:transparent;color:var(--danger);border-color:var(--danger);">다시 학습하기</button>
+         </div>`
+      : "";
+    root().innerHTML=`
+      <div class="row">
+        <div style="text-align:center;padding:6px 0;">
+          <div class="muted">오늘의 학습</div>
+          <div style="font-size:23px;font-weight:700;margin-top:2px;">¡Hola! 스페인어 복습</div>
+        </div>
+        <div class="grid2">
+          <div class="stat"><div class="label">1부 · 단어 복습</div><div class="val">${p.wDueAll}<span style="font-size:14px;color:var(--text-3);">${p.fresh>0?` +${p.fresh}신규`:""}</span></div></div>
+          <div class="stat"><div class="label">2부 · 문장 암기</div><div class="val">${p.sDueAll}</div></div>
+          <div class="stat"><div class="label">학습한 단어</div><div class="val">${learnedCount()}<span style="font-size:14px;color:var(--text-3);">/${state.cards.length}</span></div></div>
+          <div class="stat"><div class="label">완전 숙달</div><div class="val">${masteredCount()}</div></div>
+        </div>
+        ${backlogLine}
+        ${suspLine}
+        <button id="startBtn" class="btn btn-primary">${sessionLabel(p)}</button>
+        <div class="muted" style="text-align:center;">이번 주 ${weeklyDays()}일 학습 · 연속 ${state.streak}일 · 누적 ${state.totalReviews}회</div>
+        <div class="stat" style="background:var(--surface);border:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:14px;">하루 신규 단어</span>
+            <span id="npsVal" style="font-size:18px;font-weight:700;color:var(--red);">${newPerSession()}개</span>
+          </div>
+          <input id="npsRange" type="range" min="${NEW_MIN}" max="${NEW_MAX}" step="1" value="${newPerSession()}" style="width:100%;margin-top:10px;accent-color:var(--red);">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:2px;">
+            <span>적게 (느긋)</span><span>많게 (빠름)</span>
+          </div>
+          <div id="npsHint" class="muted" style="margin-top:8px;line-height:1.5;"></div>
+        </div>
+        <button id="importBtn" class="btn btn-sm">CSV로 문장 추가</button>
+        <button id="backupBtn" class="btn btn-sm">진도 백업 / 복원</button>
+        <button id="resetBtn" class="btn btn-sm" style="color:var(--text-3);">진도 초기화</button>
+        ${installBannerHTML()}
+      </div>`;
+    document.getElementById("startBtn").onclick=startSession;
+    document.getElementById("importBtn").onclick=buildImport;
+    document.getElementById("backupBtn").onclick=buildBackup;
+    document.getElementById("resetBtn").onclick=()=>{ if(confirm("모든 학습 진도를 초기화할까요?")) resetAll(); };
+    const us=document.getElementById("unsuspendBtn");
+    if (us) us.onclick=()=>{
+      state.cards.forEach(c=>{ if(c.suspended){ c.suspended=false; c.w.lapses=0; c.s.lapses=0; } });
+      saveState(); buildHome();
+    };
+    wireInstall();
+
+    const range=document.getElementById("npsRange");
+    const valEl=document.getElementById("npsVal");
+    const hintEl=document.getElementById("npsHint");
+    function updateHint(n){
+      const remaining=newCount();
+      const daysToIntro = remaining>0 ? Math.ceil(remaining/n) : 0;
+      let load;
+      if (n<=3) load="복습 부담이 가볍고 오래 지속하기 좋아요.";
+      else if (n<=6) load="권장 범위예요. 학습 속도와 부담의 균형이 좋습니다.";
+      else load="진도는 빠르지만 며칠 뒤 복습량이 많아질 수 있어요.";
+      const introMsg = remaining>0 ? `남은 신규 ${remaining}개를 모두 도입하는 데 약 ${daysToIntro}일. ` : "";
+      const cur = planCounts();
+      const throttle = (cur.fresh < Math.min(n, remaining))
+        ? ` 오늘은 밀린 복습이 많아 신규를 ${cur.fresh}개만 꺼냅니다.` : "";
+      hintEl.textContent = introMsg + load + throttle;
+    }
+    updateHint(newPerSession());
+    range.addEventListener("input",()=>{
+      const n=parseInt(range.value,10);
+      valEl.textContent=n+"개";
+      updateHint(n);
+    });
+    range.addEventListener("change",()=>{
+      const n=parseInt(range.value,10);
+      state.newPerSession=n; saveState();
+      const sb=document.getElementById("startBtn");
+      if (sb) sb.textContent = sessionLabel(planCounts());
+      updateHint(n);
+    });
+  }
+
+  function buildImport(){
+    pendingImport=[];
+    root().innerHTML=`
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="backBtn" class="btn" style="width:auto;padding:8px 12px;font-size:14px;">← 뒤로</button>
+          <div style="font-size:18px;font-weight:600;">CSV로 문장 추가</div>
+        </div>
+        <div class="stat" style="font-size:13px;color:var(--text-2);line-height:1.6;">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px;">CSV 형식</div>
+          첫 줄 헤더: <code>es,blank,ko,word,hint</code><br>
+          <span style="color:var(--text-3);">es=스페인어 문장 · blank=빈칸 단어 · ko=한국어 뜻 · word=단어뜻 · hint=영어힌트 (word·hint는 선택, blank는 문장에 포함돼야 함)</span>
+        </div>
+        <label class="card" style="display:block;padding:24px;text-align:center;border-style:dashed;border-color:var(--border-2);cursor:pointer;color:var(--text-2);">
+          파일 선택 (.csv)
+          <input id="fileInput" type="file" accept=".csv,text/csv" style="display:none;">
+        </label>
+        <div id="importResult"></div>
+      </div>`;
+    document.getElementById("backBtn").onclick=buildHome;
+    document.getElementById("fileInput").addEventListener("change",handleFile);
+  }
+
+  function buildBackup(){
+    root().innerHTML=`
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="backBtn" class="btn" style="width:auto;padding:8px 12px;font-size:14px;">← 뒤로</button>
+          <div style="font-size:18px;font-weight:600;">진도 백업 / 복원</div>
+        </div>
+        <div class="stat" style="font-size:13px;color:var(--text-2);line-height:1.6;">
+          기기를 바꾸거나 브라우저 데이터를 지우면 진도가 사라집니다. 백업 파일을 저장해 두면 언제든 그대로 되돌릴 수 있어요.
+        </div>
+        <div style="font-size:14px;font-weight:600;margin-top:4px;">백업하기 (내보내기)</div>
+        <button id="exportBtn" class="btn btn-primary">백업 파일 만들기</button>
+        <div id="exportArea"></div>
+        <div style="font-size:14px;font-weight:600;margin-top:8px;border-top:1px solid var(--border);padding-top:16px;">복원하기 (가져오기)</div>
+        <div class="stat" style="background:var(--warn-bg);color:var(--warn);font-size:13px;">복원하면 현재 진도가 백업 내용으로 완전히 대체됩니다.</div>
+        <label class="card" style="display:block;padding:24px;text-align:center;border-style:dashed;border-color:var(--border-2);cursor:pointer;color:var(--text-2);">
+          백업 파일 선택 (.csv)
+          <input id="restoreInput" type="file" accept=".csv,text/csv" style="display:none;">
+        </label>
+        <div id="restoreResult"></div>
+      </div>`;
+    document.getElementById("backBtn").onclick=buildHome;
+    document.getElementById("exportBtn").onclick=doExport;
+    document.getElementById("restoreInput").addEventListener("change",handleRestore);
+  }
+
+  function doExport(){
+    const data=exportBackup();
+    const dateStr=new Date().toISOString().slice(0,10);
+    const fname=`espanol-srs-backup-${dateStr}.csv`;
+    const area=document.getElementById("exportArea");
+    // Web Share API (파일 공유) 우선 — 아이폰에서 '파일에 저장' 가능
+    const file=new File([data],fname,{type:"text/csv"});
+    let shareTried=false;
+    if (navigator.canShare && navigator.canShare({files:[file]})){
+      shareTried=true;
+      navigator.share({files:[file],title:"스페인어 학습 진도 백업"}).catch(()=>{ showFallback(); });
+    }
+    if (!shareTried) showFallback();
+    function showFallback(){
+      // 다운로드 링크 + 전체 텍스트(길게 눌러 복사) 제공
+      const blob=new Blob([data],{type:"text/csv"});
+      const url=URL.createObjectURL(blob);
+      area.innerHTML=`
+        <a id="dl" href="${url}" download="${fname}" class="btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">다운로드 (${fname})</a>
+        <div class="muted" style="margin-bottom:6px;">아이폰에서 다운로드가 안 되면, 아래 내용을 길게 눌러 전체 선택 → 복사한 뒤 메모 등에 붙여넣어 보관하세요.</div>
+        <textarea readonly style="width:100%;height:120px;font-family:var(--font);font-size:11px;padding:8px;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--surface);color:var(--text);" onclick="this.select()">${esc(data)}</textarea>`;
+    }
+    if (shareTried){
+      area.innerHTML=`<div class="muted">공유 시트가 열리면 "파일에 저장"을 선택하세요. 안 열리면 아래 버튼을 쓰세요.</div><button id="fb2" class="btn btn-sm" style="margin-top:8px;">다운로드/복사로 받기</button>`;
+      const b=document.getElementById("fb2"); if(b) b.onclick=showFallback;
+    }
+  }
+
+  function handleRestore(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      const box=document.getElementById("restoreResult");
+      try {
+        const n=importBackup(ev.target.result);
+        box.innerHTML=`<div class="stat" style="background:var(--success-bg);color:var(--success);text-align:center;font-weight:600;">${n}개 카드의 진도를 복원했어요!</div><button id="goHome2" class="btn" style="margin-top:12px;">홈으로</button>`;
+        const h=document.getElementById("goHome2"); if(h) h.onclick=buildHome;
+      } catch(err){
+        box.innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);font-size:14px;">복원 실패: ${esc(err.message)}<br><span style="font-size:12px;">이 앱에서 만든 백업 파일인지 확인해 주세요.</span></div>`;
+      }
+    };
+    reader.onerror=()=>{ document.getElementById("restoreResult").innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);">파일을 읽지 못했습니다.</div>`; };
+    reader.readAsText(file,"UTF-8");
+  }
+  function handleFile(e){
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{ const {cards,errors}=csvToCards(ev.target.result); pendingImport=cards; renderImportPreview(cards,errors); };
+    reader.onerror=()=>{ document.getElementById("importResult").innerHTML=`<div class="stat" style="background:var(--danger-bg);color:var(--danger);">파일을 읽지 못했습니다.</div>`; };
+    reader.readAsText(file,"UTF-8");
+  }
+  function renderImportPreview(cards,errors){
+    const box=document.getElementById("importResult"); let html="";
+    if (cards.length>0){
+      html+=`<div style="font-size:14px;font-weight:600;margin-bottom:8px;">미리보기 (${cards.length}개 추가 가능)</div><div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;margin-bottom:12px;">`;
+      cards.slice(0,8).forEach(c=>{ const p=c.es.split(c.blank);
+        html+=`<div class="card" style="padding:10px 12px;"><div style="font-size:14px;">${esc(p[0])}<b style="color:var(--red);">${esc(c.blank)}</b>${esc(p.slice(1).join(c.blank))}</div><div class="muted" style="margin-top:2px;">${esc(c.ko)}</div></div>`; });
+      if (cards.length>8) html+=`<div class="muted" style="text-align:center;">…외 ${cards.length-8}개</div>`;
+      html+=`</div>`;
+    }
+    if (errors.length>0) html+=`<div class="stat" style="background:var(--warn-bg);color:var(--warn);font-size:13px;margin-bottom:12px;">건너뛴 행 ${errors.length}개<br><span style="font-size:12px;">${errors.slice(0,3).map(esc).join("<br>")}${errors.length>3?"<br>…":""}</span></div>`;
+    if (cards.length>0) html+=`<button id="confirmImport" class="btn btn-primary">${cards.length}개 문장 추가하기</button>`;
+    else if (errors.length>0) html+=`<div class="muted" style="text-align:center;">추가할 수 있는 문장이 없습니다.</div>`;
+    box.innerHTML=html;
+    const btn=document.getElementById("confirmImport");
+    if (btn) btn.onclick=()=>{
+      addCards(pendingImport);
+      box.innerHTML=`<div class="stat" style="background:var(--success-bg);color:var(--success);text-align:center;font-weight:600;">${pendingImport.length}개 문장이 추가되었습니다!</div><button id="goHome" class="btn" style="margin-top:12px;">홈으로</button>`;
+      document.getElementById("goHome").onclick=buildHome;
+    };
+  }
+
+  let phase="word"; // 현재 진행 중인 파트
+  function startSession(){
+    const s=buildSession();
+    queue=[...s.wordQ, ...s.sentQ];
+    if (queue.length===0){ buildDone(); return; }
+    qIdx=0; sessionWrong=[]; sessionStats={correct:0,wrong:0,near:0,sCorrect:0,sWrong:0};
+    retryDone={w:false,s:false};
+    undoState=null;
+    showCard();
+  }
+
+  // ---- 채점 실행취소 ----
+  function snapshot(card, trackKey){
+    return {
+      cardId: card.id, track: trackKey,
+      t: JSON.parse(JSON.stringify(card[trackKey])),
+      sDue: card.s.due, lastSeen: card.lastSeen, suspended: !!card.suspended,
+      totalReviews: state.totalReviews,
+      stats: JSON.parse(JSON.stringify(sessionStats)),
+      wrong: sessionWrong.slice()
+    };
+  }
+  function doUndo(){
+    if (!undoState) return;
+    const c = getCard(undoState.cardId);
+    if (c){
+      c[undoState.track] = undoState.t;
+      c.s.due = undoState.sDue;
+      c.lastSeen = undoState.lastSeen;
+      c.suspended = undoState.suspended;
+    }
+    state.totalReviews = undoState.totalReviews;
+    sessionStats = undoState.stats;
+    sessionWrong = undoState.wrong;
+    undoState = null;
+    saveState();
+    showCard();   // 같은 카드를 채점 전 상태로 다시 보여준다
+  }
+  function actionsWithUndo(nextLabel, undoLabel){
+    return `<div class="muted" style="text-align:center;margin-bottom:10px;">${nextLabel}</div>
+      <div class="grid2">
+        <button id="undoBtn" class="btn btn-sm" style="color:var(--text-2);">${undoLabel||"실행취소"}</button>
+        <button id="nextBtn" class="btn btn-sm btn-primary">다음</button>
+      </div>`;
+  }
+  function wireActions(){
+    const nb=document.getElementById("nextBtn"); if(nb){ nb.onclick=next; nb.focus(); }
+    const ub=document.getElementById("undoBtn"); if(ub) ub.onclick=doUndo;
+  }
+
+  function showCard(){
+    revealed=false;
+    const item=queue[qIdx];
+    const card=getCard(item.id);
+    phase=item.mode;
+    const progress=Math.round((qIdx/queue.length)*100);
+    const partLabel = item.mode==="word" ? "1부 · 단어" : "2부 · 문장";
+    if (item.mode==="word") return showWordCard(card, progress, partLabel);
+    return showSentenceCard(card, progress, partLabel);
+  }
+
+  function showWordCard(card, progress, partLabel){
+    const parts=card.es.split(card.blank);
+    const before=esc(parts[0]), after=esc(parts.slice(1).join(card.blank));
+    const hintLine=(card.hint||card.word)?`<div class="muted" style="margin-top:8px;">힌트: ${esc(card.hint||"")}${card.hint&&card.word?" → ":""}<b style="color:var(--text-2);">${esc(card.word||"")}</b></div>`:"";
+    const tough = card.w.lapses>=4 ? `<span style="color:var(--danger);"> · 자주 틀리는 카드</span>` : "";
+    root().innerHTML=`
+      <div class="row">
+        <div class="pbar"><div style="width:${progress}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);">
+          <span>${qIdx+1} / ${queue.length} · ${partLabel}</span><span>${card.w.reps===0?"새 단어":"복습 "+card.w.reps+"회차"}${tough}</span></div>
+        <div class="card" style="padding:22px 18px;">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:6px;">${esc(card.ko)}</div>
+          <div style="font-size:20px;line-height:1.6;">${before}<span id="blankSlot" class="blank">____</span>${after}</div>
+          ${hintLine}
+        </div>
+        <input id="answerInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="스페인어로 입력..." style="width:100%;font-size:18px;text-align:center;padding:12px;">
+        <div id="accentBar" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;"></div>
+        <div id="feedback"></div>
+        <div id="actions"></div>
+      </div>`;
+    const input=document.getElementById("answerInput");
+    input.focus();
+    input.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ revealed?next():checkAnswer(); }});
+    // 모바일에서 치기 어려운 글자 빠른 입력
+    const bar=document.getElementById("accentBar");
+    bar.innerHTML="áéíóúüñ¿¡".split("").map(ch=>
+      `<button type="button" class="btn" data-ch="${ch}" style="width:auto;padding:6px 10px;font-size:15px;font-weight:500;">${ch}</button>`).join("");
+    bar.querySelectorAll("button").forEach(b=>{
+      b.onclick=()=>{
+        if (input.disabled) return;
+        const st=input.selectionStart==null?input.value.length:input.selectionStart;
+        const en=input.selectionEnd==null?st:input.selectionEnd;
+        input.value=input.value.slice(0,st)+b.dataset.ch+input.value.slice(en);
+        const pos=st+1; input.focus(); try{ input.setSelectionRange(pos,pos); }catch(e){}
+      };
+    });
+    document.getElementById("actions").innerHTML=`<div class="grid2">
+        <button id="dontKnow" class="btn btn-sm" style="color:var(--text-2);">모르겠어요</button>
+        <button id="checkBtn" class="btn btn-sm btn-primary">확인</button></div>`;
+    document.getElementById("checkBtn").onclick=checkAnswer;
+    document.getElementById("dontKnow").onclick=()=>gradeWord(card,2,"dont","");
+  }
+  function checkAnswer(){
+    const card=getCard(queue[qIdx].id);
+    const raw=document.getElementById("answerInput").value;
+    const val=raw.trim(), ans=(card.blank||"").trim();
+    if (!val){   // 빈 입력은 채점하지 않는다 (실수로 Enter를 눌러 오답 처리되는 것 방지)
+      document.getElementById("feedback").innerHTML=
+        `<div class="stat" style="background:var(--surface-2);color:var(--text-2);text-align:center;font-size:13px;">답을 입력한 뒤 확인을 눌러 주세요. 모르면 "모르겠어요"를 선택하세요.</div>`;
+      return;
+    }
+    if (val===ans) gradeWord(card,5,"exact",val);
+    else if (val.toLowerCase()===ans.toLowerCase()) gradeWord(card,4,"case",val);
+    else if (deaccent(val)===deaccent(ans)) gradeWord(card,4,"accent",val);
+    else if (normalize(val)===normalize(ans)) gradeWord(card,4,"enye",val);
+    else gradeWord(card,1,"wrong",val);
+  }
+  function gradeWord(card,quality,kind,userVal){
+    revealed=true;
+    undoState=snapshot(card,"w");
+
+    if (kind==="exact") sessionStats.correct++;
+    else if (kind==="case"||kind==="accent"||kind==="enye"){ sessionStats.correct++; sessionStats.near++; }
+    else { sessionStats.wrong++; if(!sessionWrong.includes(card.id)) sessionWrong.push(card.id); }
+
+    schedule(card.w,quality);
+    // 문장 트랙은 단어를 한 번이라도 맞힌 뒤에 열린다 (첫날부터 문장 전체를 요구하지 않도록)
+    if (quality>=3 && card.s.due===null) card.s.due = todayStart()+DAY;
+    const leeched = checkLeech(card);
+    card.lastSeen=Date.now(); state.totalReviews++; saveState();
+
+    const slot=document.getElementById("blankSlot");
+    if (slot){ slot.textContent=card.blank; slot.style.borderBottom="none"; slot.style.color=quality>=4?"var(--success)":"var(--danger)"; }
+    const input=document.getElementById("answerInput");
+    if (input) input.disabled=true;
+
+    let msg,color,bg,undoLabel="실행취소";
+    if (kind==="exact"){ msg="정답입니다!"; color="var(--success)"; bg="var(--success-bg)"; }
+    else if (kind==="case"){ msg=`대소문자만 달라요. 정답: <b>${esc(card.blank)}</b>`; color="var(--warn)"; bg="var(--warn-bg)"; }
+    else if (kind==="accent"){ msg=`악센트만 달라요. 정답: <b>${esc(card.blank)}</b>`; color="var(--warn)"; bg="var(--warn-bg)"; }
+    else if (kind==="enye"){ msg=`ñ와 n은 서로 다른 글자예요. 정답: <b>${esc(card.blank)}</b>`; color="var(--warn)"; bg="var(--warn-bg)"; }
+    else if (kind==="dont"){ msg=`정답: <b>${esc(card.blank)}</b>`; color="var(--text-2)"; bg="var(--surface-2)"; }
+    else {
+      const d=diffHTML(userVal||"", card.blank||"");
+      const typo = d.dist>0 && d.dist<=TYPO_DISTANCE;
+      if (typo) undoLabel="오타였어요 (되돌리기)";
+      msg = `${typo?`오타 같아요 (${d.dist}글자 차이)`:"아쉬워요"}<br>
+        <span style="font-size:13px;">입력 <code>${d.user}</code> → 정답 <code>${d.answer}</code></span>`;
+      color="var(--danger)"; bg="var(--danger-bg)";
+    }
+    const leechMsg = leeched
+      ? `<div class="stat" style="background:var(--surface-2);color:var(--text-2);font-size:12px;margin-top:8px;text-align:center;">이 카드는 반복해서 막혀 잠시 보류합니다. 홈에서 다시 켤 수 있어요.</div>`
+      : "";
+    document.getElementById("feedback").innerHTML=
+      `<div class="stat" style="background:${bg};color:${color};text-align:center;font-size:14px;line-height:1.6;">${msg}</div>${leechMsg}`;
+
+    const nextLabel = card.w.interval===0
+      ? `이번 세션에 다시 나와요${card.w.pending>0?` · 맞히면 ${card.w.pending}일 뒤로 복귀`:""}`
+      : `다음 복습: ${card.w.interval}일 후`;
+    document.getElementById("actions").innerHTML=actionsWithUndo(nextLabel, undoLabel);
+    wireActions();
+  }
+
+  function showSentenceCard(card, progress, partLabel){
+    root().innerHTML=`
+      <div class="row">
+        <div class="pbar"><div style="width:${progress}%;"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);">
+          <span>${qIdx+1} / ${queue.length} · ${partLabel}</span><span>${card.s.reps===0?"문장 첫 암기":"문장 복습 "+card.s.reps+"회차"}</span></div>
+        <div class="card" style="padding:22px 18px;text-align:center;">
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">아래 뜻을 보고 스페인어 문장 전체를 떠올려 보세요</div>
+          <div style="font-size:17px;color:var(--text);line-height:1.6;">${esc(card.ko)}</div>
+          <div id="sentReveal" style="margin-top:16px;font-size:20px;line-height:1.6;color:var(--red);font-weight:600;visibility:hidden;">${esc(card.es)}</div>
+        </div>
+        <div id="actions"></div>
+      </div>`;
+    document.getElementById("actions").innerHTML=`<button id="revealBtn" class="btn btn-primary">정답 문장 보기</button>`;
+    document.getElementById("revealBtn").onclick=()=>{
+      const r=document.getElementById("sentReveal"); if(r) r.style.visibility="visible";
+      document.getElementById("actions").innerHTML=`
+        <div class="muted" style="text-align:center;margin-bottom:10px;">얼마나 떠올렸나요?</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+          <button id="sNo" class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);">못 외움</button>
+          <button id="sMid" class="btn btn-sm" style="color:var(--warn);border-color:var(--warn);">가물가물</button>
+          <button id="sYes" class="btn btn-sm" style="color:var(--success);border-color:var(--success);">기억남</button>
+        </div>`;
+      document.getElementById("sNo").onclick=()=>gradeSentence(card,1);
+      document.getElementById("sMid").onclick=()=>gradeSentence(card,3);
+      document.getElementById("sYes").onclick=()=>gradeSentence(card,5);
+    };
+  }
+  function gradeSentence(card,quality){
+    undoState=snapshot(card,"s");
+    if (quality>=4) sessionStats.sCorrect++;
+    else if (quality<3){ sessionStats.sWrong++; }
+    schedule(card.s,quality);
+    const leeched = checkLeech(card);
+    card.lastSeen=Date.now(); state.totalReviews++; saveState();
+    const nextLabel = card.s.interval===0
+      ? `이번 세션에 다시 나와요${card.s.pending>0?` · 맞히면 ${card.s.pending}일 뒤로 복귀`:""}`
+      : `다음 문장 복습: ${card.s.interval}일 후`;
+    // 문장 오답이면 이번 세션 끝에 재시도용 표시
+    if (quality<3){ if(!sessionWrong.some(x=>x==="S"+card.id)) sessionWrong.push("S"+card.id); }
+    if (leeched){
+      const r=document.getElementById("sentReveal");
+      if (r) r.insertAdjacentHTML("afterend",
+        `<div class="muted" style="margin-top:10px;font-size:12px;">반복해서 막혀 이 카드를 잠시 보류합니다.</div>`);
+    }
+    document.getElementById("actions").innerHTML=actionsWithUndo(nextLabel);
+    wireActions();
+  }
+
+  function next(){
+    undoState=null;
+    qIdx++;
+    // 파트별 오답 재시도 1회 (플래그를 모듈 변수로 둬서 concat 시 소실되지 않게 수정)
+    if (qIdx>=queue.length){
+      const alive=id=>{ const c=getCard(id); return c && !c.suspended; };
+      const retryW=sessionWrong.filter(id=>typeof id==="number")
+        .filter(id=>{const c=getCard(id);return c&&!c.suspended&&c.w.interval===0;});
+      const retryS=sessionWrong.filter(id=>typeof id==="string"&&id[0]==="S")
+        .map(x=>parseInt(x.slice(1),10))
+        .filter(id=>{const c=getCard(id);return c&&!c.suspended&&c.s.interval===0;});
+      let added=[];
+      if (retryW.length>0 && !retryDone.w){ added=added.concat(retryW.map(id=>({id,mode:"word"}))); retryDone.w=true; }
+      if (retryS.length>0 && !retryDone.s){ added=added.concat(retryS.map(id=>({id,mode:"sentence"}))); retryDone.s=true; }
+      if (added.length>0){ queue=queue.concat(shuffleNoAdjacentBy(added)); }
+    }
+    if (qIdx>=queue.length){ buildDone(); return; }
+    showCard();
+  }
+  function buildDone(){
+    const wTotal=sessionStats.correct+sessionStats.wrong;
+    const rate=wTotal>0?Math.round((sessionStats.correct/wTotal)*100):0;
+    const sTotal=(sessionStats.sCorrect||0)+(sessionStats.sWrong||0);
+    const td=todayStart();
+    if (state.lastStudyDay!==td && (wTotal>0 || sTotal>0)){
+      // 하루 건너뛰어도 연속 학습으로 인정 (격일 학습 패턴 반영)
+      const gap = state.lastStudyDay==null ? null : Math.round((td-state.lastStudyDay)/DAY);
+      if (gap!==null && gap<=2) state.streak++; else state.streak=1;
+      state.lastStudyDay=td;
+      state.studyDays=(state.studyDays||[]).filter(d=>d>td-60*DAY);
+      state.studyDays.push(td);
+      saveState();
+    }
+    const sentLine = sTotal>0 ? `<div class="muted">문장 암기: 기억남 ${sessionStats.sCorrect||0} / ${sTotal}</div>` : "";
+    const p=planCounts();
+    const leftLine = p.backlog>0 ? `<div class="muted">아직 밀린 항목 ${p.backlog}개 — 한 세션 더 하면 줄어들어요.</div>` : "";
+    root().innerHTML=`
+      <div class="row" style="text-align:center;padding:12px 0;">
+        <div style="font-size:23px;font-weight:700;">¡Buen trabajo! 🎉</div>
+        <div style="font-size:14px;color:var(--text-2);">오늘 학습을 완료했어요</div>
+        <div class="grid2">
+          <div class="stat"><div class="label">단어 정답률</div><div class="val">${wTotal>0?rate+"%":"–"}</div></div>
+          <div class="stat"><div class="label">연속 학습</div><div class="val">${state.streak}일</div></div>
+        </div>
+        <div class="muted">단어: 정답 ${sessionStats.correct} · 오답 ${sessionStats.wrong}${sessionStats.near>0?` · 철자 실수 ${sessionStats.near}`:""}</div>
+        ${sentLine}
+        ${leftLine}
+        <button id="homeBtn" class="btn btn-primary">홈으로</button>
+      </div>`;
+    document.getElementById("homeBtn").onclick=buildHome;
+  }
+
+  // ---- PWA wiring ----
+  window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferredPrompt=e; const b=document.getElementById("installBtn"); if(!b && root().querySelector(".row")) buildHome(); });
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("sw.js").then((reg)=>{
+        // 새 버전이 설치 대기 중이면 즉시 적용 + 새로고침
+        reg.addEventListener("updatefound",()=>{
+          const nw=reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange",()=>{
+            if (nw.state==="installed" && navigator.serviceWorker.controller){
+              nw.postMessage("skipWaiting");
+            }
+          });
+        });
+        // 주기적으로 새 버전 있는지 확인 (포그라운드 복귀 시)
+        document.addEventListener("visibilitychange",()=>{
+          if (document.visibilityState==="visible") reg.update().catch(()=>{});
+        });
+      }).catch(()=>{});
+      let refreshed=false;
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if (refreshed) return; refreshed=true;
+        window.location.reload();
+      });
+    });
+  }
+
+  loadState();
+  buildHome();
+})();
+</script>
+</body>
+</html>
